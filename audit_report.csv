@@ -1,0 +1,24 @@
+invoice_number,bucket,reason,risk_note
+INV-2001,UNRESOLVED,No payout record found for this invoice.,High priority - missing payout record; urgent review required.
+INV-2002,FLAGGED,Underpayment: payout is 340.27 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2008,FLAGGED,Underpayment: payout is 1111.55 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2010,FLAGGED,Underpayment: payout is 1285.41 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2012,FLAGGED,Underpayment: payout is 1676.72 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2015,FLAGGED,Underpayment: payout is 1607.72 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2016,FLAGGED,Underpayment: payout is 994.77 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2018,UNRESOLVED,No payout record found for this invoice.,High priority - missing payout record; urgent review required.
+INV-2022,FLAGGED,Underpayment: payout is 617.32 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2024,FLAGGED,Underpayment: payout is 1669.36 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2025,FLAGGED,Underpayment: payout is 1272.84 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2033,FLAGGED,Underpayment: payout is 959.09 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2034,FLAGGED,Underpayment: payout is 1704.09 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2039,UNRESOLVED,No payout record found for this invoice.,High priority - missing payout record; urgent review required.
+INV-2041,FLAGGED,Underpayment: payout is 1343.62 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2044,FLAGGED,Underpayment: payout is 1561.31 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2047,FLAGGED,Underpayment: payout is 499.78 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2051,FLAGGED,Underpayment: payout is 1783.86 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2052,FLAGGED,Underpayment: payout is 1662.54 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2054,UNRESOLVED,No payout record found for this invoice.,High priority - missing payout record; urgent review required.
+INV-2056,UNRESOLVED,No payout record found for this invoice.,High priority - missing payout record; urgent review required.
+INV-2058,FLAGGED,Underpayment: payout is 1192.89 less than invoice amount.,High priority - underpayment requires investigation.
+INV-2059,FLAGGED,Underpayment: payout is 1520.77 less than invoice amount.,High priority - underpayment requires investigation.

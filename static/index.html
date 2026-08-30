@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multi-Source Reconciliation Engine</title>
+    <style>
+      :root {
+        --background: #071916;
+        --foreground: #edf8f2;
+        --card: #101b19;
+        --card-strong: #0d1716;
+        --secondary: #122525;
+
+        --secondary-strong: #172d2c;
+        --primary: #37d39a;
+        --primary-foreground: #081b18;
+        --accent: #e9b25e;
+        --accent-soft: rgba(233, 178, 94, 0.12);
+        --destructive: #ff6b74;
+        --destructive-soft: rgba(255, 107, 116, 0.12);
+        --muted-foreground: #8aa79e;
+        --border: rgba(148, 163, 184, 0.18);
+        --shadow: rgba(15, 30, 29, 0.8);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .page-shell {
+        width: 100%;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--foreground);
+      }
+
+      .container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 24px 20px 36px;
+      }
+
+      @media (min-width: 640px) {
+        .container {
+          padding-left: 32px;
+          padding-right: 32px;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .container {
+          padding-top: 36px;
+          padding-left: 48px;
+          padding-right: 48px;
+        }
+      }
+
+      .topbar {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding-bottom: 28px;
+        margin-bottom: 28px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      @media (min-width: 768px) {
+        .topbar {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: 0 0 24px rgba(55, 211, 153, 0.2);
+      }
+
+      .brand-mark svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .brand-title {
+        font-size: clamp(1.15rem, 2vw, 1.8rem);
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        line-height: 1.15;
+      }
+
+      .header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .env-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-right: 4px;
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--primary);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.3);
+          opacity: 0.7;
+        }
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        height: 40px;
+        padding: 0 16px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--foreground);
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+        text-transform: none;
+      }
+
+      .button:hover {
+        border-color: rgba(148, 163, 184, 0.7);
+        background: var(--secondary);
+      }
+
+      .button:disabled {
+        opacity: 0.7;
+        cursor: default;
+      }
+
+      .button.primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: var(--primary-foreground);
+        font-weight: 700;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .button.primary:hover {
+        filter: brightness(1.08);
+      }
+
+      .button.secondary {
+        background: var(--card);
+        border: 1px solid var(--border);
+        color: var(--foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .button svg {
+        width: 13px;
+        height: 13px;
+      }
+
+      .icon-spin {
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .overview-label {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+      }
+
+      .section-title {
+        margin-top: 4px;
+        margin-bottom: 0;
+        font-size: 1.12rem;
+        font-weight: 600;
+      }
+
+      .sync-label {
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+      }
+
+      .overview-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 1024px) {
+        .overview-grid {
+          grid-template-columns: 1fr 1fr 1.35fr;
+        }
+      }
+
+      .stat-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--card);
+        padding: 20px 20px 18px;
+      }
+
+      .stat-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .card-label {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-size: 14px;
+      }
+
+      .mini-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--muted-foreground);
+      }
+
+      .stat-number-row {
+        margin-top: 30px;
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+      }
+
+      .stat-number {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: clamp(2.2rem, 3vw, 3.2rem);
+        letter-spacing: -0.08em;
+        font-weight: 600;
+        line-height: 1;
+      }
+
+      .stat-unit {
+        margin-bottom: 4px;
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+
+      .stat-status {
+        margin-top: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--primary);
+        font-size: 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--primary);
+      }
+
+      .verification-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-top: 18px;
+      }
+
+      .ring {
+        position: relative;
+        width: 96px;
+        height: 96px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: conic-gradient(var(--primary) 61.66%, var(--secondary) 0);
+      }
+
+      .ring-inner {
+        width: 76px;
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: var(--card);
+      }
+
+      .ring-value {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.04em;
+      }
+
+      .verification-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .verification-number {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .verification-sub {
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+
+      .verification-pill {
+        margin-top: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--primary);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+      }
+
+      .exception-grid {
+        margin-top: 26px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .mini-box {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(55, 211, 153, 0.2);
+        background: rgba(55, 211, 153, 0.05);
+      }
+
+      .mini-box.red {
+        border-color: rgba(255, 107, 116, 0.2);
+        background: rgba(255, 107, 116, 0.05);
+      }
+
+      .mini-box.amber {
+        border-color: rgba(233, 178, 94, 0.2);
+        background: rgba(233, 178, 94, 0.05);
+      }
+
+      .mini-tag {
+        display: inline-flex;
+        border-radius: 7px;
+        padding: 4px 8px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .mini-box .mini-tag.green {
+        background: rgba(55, 211, 153, 0.12);
+        color: var(--primary);
+      }
+
+      .mini-box .mini-tag.amber {
+        background: rgba(233, 178, 94, 0.15);
+        color: var(--accent);
+      }
+
+      .mini-box .mini-tag.red {
+        background: rgba(255, 107, 116, 0.12);
+        color: var(--destructive);
+      }
+
+      .mini-number {
+        margin-top: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 28px;
+        font-weight: 600;
+      }
+
+      .mini-label {
+        margin-top: 4px;
+        color: var(--muted-foreground);
+        font-size: 11px;
+      }
+
+      .queue-panel {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--card);
+        overflow: hidden;
+      }
+
+      .queue-header {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        border-bottom: 1px solid var(--border);
+        padding: 20px 20px 18px;
+      }
+
+      @media (min-width: 640px) {
+        .queue-header {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+      }
+
+      .queue-heading-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+
+      .heading-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--destructive);
+      }
+
+      .queue-header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .queue-subtext {
+        margin: 0;
+        color: var(--muted-foreground);
+        font-size: 14px;
+      }
+
+      .filter-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        align-self: flex-start;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--muted-foreground);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 11px;
+        cursor: pointer;
+      }
+
+      .filter-btn:hover {
+        background: var(--secondary);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 850px;
+        border-collapse: collapse;
+      }
+
+      thead {
+        background: rgba(18, 37, 37, 0.45);
+      }
+
+      th {
+        padding: 12px 24px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        font-weight: 500;
+      }
+
+      td {
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+      }
+
+      tbody tr {
+        transition: background 0.15s ease;
+      }
+
+      tbody tr:hover {
+        background: rgba(18, 37, 37, 0.3);
+      }
+
+      tbody tr.open {
+        background: rgba(18, 37, 37, 0.2);
+      }
+
+      .invoice-btn {
+        border: none;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        padding: 0;
+        text-align: left;
+      }
+
+      .invoice-id {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .invoice-date {
+        margin-top: 4px;
+        color: var(--muted-foreground);
+        font-size: 11px;
+      }
+
+      .amount {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .amount.negative {
+        color: var(--destructive);
+      }
+
+      .amount.neutral {
+        color: var(--accent);
+      }
+
+      .detail-text {
+        margin-top: 4px;
+        color: var(--muted-foreground);
+        font-size: 11px;
+      }
+
+      .risk-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0.02em;
+      }
+
+      .risk-badge.red {
+        border-color: rgba(255, 107, 116, 0.3);
+        background: rgba(255, 107, 116, 0.12);
+        color: var(--destructive);
+      }
+
+      .risk-badge.amber {
+        border-color: rgba(233, 178, 94, 0.3);
+        background: rgba(233, 178, 94, 0.12);
+        color: var(--accent);
+      }
+
+      .risk-badge.green {
+        border-color: rgba(55, 211, 153, 0.25);
+        background: rgba(55, 211, 153, 0.12);
+        color: var(--primary);
+      }
+
+      .risk-badge.slate {
+        border-color: var(--border);
+        background: rgba(148, 163, 184, 0.1);
+        color: var(--muted-foreground);
+      }
+
+      .risk-badge svg {
+        width: 12px;
+        height: 12px;
+      }
+
+      .step-cell {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+      }
+
+      .note {
+        margin-top: 8px;
+        max-width: 320px;
+        color: var(--muted-foreground);
+        font-size: 11px;
+        line-height: 1.7;
+      }
+
+      .expand-btn {
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: transparent;
+        border: none;
+        color: var(--muted-foreground);
+        cursor: pointer;
+      }
+
+      .expand-btn:hover {
+        background: var(--secondary);
+        color: var(--foreground);
+      }
+
+      .chevron {
+        width: 16px;
+        height: 16px;
+        transition: transform 0.2s ease;
+      }
+
+      .expand-btn.open .chevron {
+        transform: rotate(180deg);
+      }
+
+      .table-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-top: 1px solid var(--border);
+        padding: 16px 24px;
+      }
+
+      .record-count {
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .review-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted-foreground);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 10px;
+        text-transform: none;
+      }
+
+      .review-state svg {
+        width: 13px;
+        height: 13px;
+        color: var(--accent);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      @media (max-width: 640px) {
+        .table-footer {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .header-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page-shell">
+      <div class="container">
+        <header class="topbar">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2.5" y="5.5" width="19" height="13" rx="2.5"></rect>
+                <path d="M7 9.5h10"></path>
+                <path d="M7 14.5h7"></path>
+                <path d="M15.5 5.5v-2"></path>
+                <path d="M8.5 5.5v-2"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="brand-title">Multi-Source Reconciliation Engine</h1>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <span class="env-badge"><span class="pulse-dot"></span>Live environment</span>
+            <button id="downloadBtn" class="button secondary" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3v11"></path>
+                <path d="M8.5 20.5l3.5 3.5 3.5-3.5"></path>
+                <path d="M4 18.5h16"></path>
+              </svg>
+              Download audit_report.csv
+            </button>
+            <button id="scanBtn" class="button primary" type="button">
+              <svg id="scanIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h11A2.5 2.5 0 0 1 20 8.5"></path>
+                <path d="M5 12.5h14"></path>
+                <path d="M9 18.5h6"></path>
+                <path d="M8 6V4"></path>
+                <path d="M16 6V4"></path>
+              </svg>
+              <span id="scanText">Trigger Live Ledger Scan</span>
+            </button>
+          </div>
+        </header>
+
+        <section aria-labelledby="overview-heading">
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom: 18px; gap:12px; flex-wrap:wrap;">
+            <div>
+              <p class="overview-label">System overview</p>
+              <h2 id="overview-heading" class="section-title">Ledger health at a glance</h2>
+            </div>
+            <span class="sync-label">Last sync · 09:47:22 UTC</span>
+          </div>
+
+          <div class="overview-grid">
+            <article class="stat-card">
+              <div class="stat-header">
+                <p class="card-label">Total Batch Throughput</p>
+                <svg class="mini-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 12h4l3-8 5 16 3-8h3"></path>
+                </svg>
+              </div>
+              <div class="stat-number-row">
+                <span id="totalRecordsValue" class="stat-number">60</span>
+                <span class="stat-unit">Records</span>
+              </div>
+              <div class="stat-status"><span class="status-dot"></span>Batch #LC-84019 fully ingested</div>
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-header">
+                <p class="card-label">System Verification Rate</p>
+                <svg class="mini-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--primary);">
+                  <path d="M12 3.5 5.5 6v5.7c0 4.2 2.7 8.1 6.5 9.8 3.8-1.7 6.5-5.6 6.5-9.8V6L12 3.5Z"></path>
+                  <path d="m9.2 12.2 1.8 1.8 3.9-4.2"></path>
+                </svg>
+              </div>
+              <div class="verification-row">
+                <div class="ring" aria-label="61.66 percent verification rate">
+                  <div class="ring-inner"><span id="verificationRateValue" class="ring-value">61.66%</span></div>
+                </div>
+                <div class="verification-meta">
+                  <div id="resolvedCountValue" class="verification-number">37 / 60</div>
+                  <div class="verification-sub">Resolved records</div>
+                  <div class="verification-pill"><span class="status-dot"></span>Within target range</div>
+                </div>
+              </div>
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-header">
+                <p class="card-label">Exception breakdown</p>
+                <span class="sync-label" style="letter-spacing: 0.2em; text-transform: uppercase;">60 total</span>
+              </div>
+              <div class="exception-grid">
+                <div class="mini-box green">
+                  <span class="mini-tag green">OK</span>
+                  <div id="okCountValue" class="mini-number">37</div>
+                  <div class="mini-label">Logs</div>
+                </div>
+                <div class="mini-box amber">
+                  <span class="mini-tag amber">FLAGGED</span>
+                  <div id="flaggedCountValue" class="mini-number">20</div>
+                  <div class="mini-label">Deviations</div>
+                </div>
+                <div class="mini-box red">
+                  <span class="mini-tag red">UNRESOLVED</span>
+                  <div id="unresolvedCountValue" class="mini-number">3</div>
+                  <div class="mini-label">Exceptions</div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="queue-panel" aria-labelledby="anomalies-heading" style="margin-top: 28px;">
+          <div class="queue-header">
+            <div>
+              <div class="queue-heading-wrap">
+                <span class="heading-dot"></span>
+                <h2 id="anomalies-heading">Anomaly queue</h2>
+              </div>
+              <p class="queue-subtext">AI-detected ledger deviations requiring operational review.</p>
+            </div>
+            <button id="filterBtn" class="filter-btn" type="button" aria-label="Toggle anomaly filter">
+              <span id="filterLabel">All anomalies</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px;">
+                <path d="m7 10 5 5 5-5"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice ID</th>
+                  <th>Discrepancy margin</th>
+                  <th>Security risk tag</th>
+                  <th>Operational next step</th>
+                  <th style="width:48px;"></th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <div class="record-count" id="recordCount">Showing 5 of 60 records</div>
+            <div class="review-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2v10"></path>
+                <path d="M9.2 15.5h5.6"></path>
+                <path d="M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"></path>
+              </svg>
+              Automated review active
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      let rows = [];
+
+      const filterState = { value: 'All anomalies', expandedRow: null };
+      const tableBody = document.getElementById('tableBody');
+      const filterLabel = document.getElementById('filterLabel');
+      const recordCount = document.getElementById('recordCount');
+
+      function getRiskClass(tone) {
+        if (tone === 'red') return 'red';
+        if (tone === 'amber') return 'amber';
+        if (tone === 'green') return 'green';
+        return 'slate';
+      }
+
+      function getIconMarkup(type) {
+        const common = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+
+        if (type === 'arrow-down') {
+          return `<svg ${common} aria-hidden="true"><path d="M12 4v12"></path><path d="M7 17l5 5 5-5"></path></svg>`;
+        }
+
+        if (type === 'warning') {
+          return `<svg ${common} aria-hidden="true"><path d="M12 3.5 21 18.5a1 1 0 0 1-.87 1.5H3.87A1 1 0 0 1 3 18.5L12 3.5Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>`;
+        }
+
+        if (type === 'alert') {
+          return `<svg ${common} aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v5"></path><path d="M12 16h.01"></path></svg>`;
+        }
+
+        if (type === 'check') {
+          return `<svg ${common} aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5"></path></svg>`;
+        }
+
+        if (type === 'shield') {
+          return `<svg ${common} aria-hidden="true"><path d="M12 3.5 18.5 5.8v6.1c0 4.1-2.8 7.9-6.5 9.5-3.7-1.6-6.5-5.4-6.5-9.5V5.8L12 3.5Z"></path><path d="m9.2 12.2 1.8 1.8 3.9-4.2"></path></svg>`;
+        }
+
+        return '';
+      }
+
+      function parseReasonToMargin(reason = '') {
+        const cleanReason = String(reason || '').trim();
+        if (!cleanReason) return '—';
+
+        const amountMatch = cleanReason.match(/\d[\d,]*\.\d{2}/);
+        if (!amountMatch) return '—';
+
+        const amount = amountMatch[0];
+        const normalized = cleanReason.toLowerCase();
+
+        if (normalized.includes('underpayment') || normalized.includes('less than')) {
+          return `-$${amount}`;
+        }
+
+        if (normalized.includes('overpayment') || normalized.includes('more than')) {
+          return `+$${amount}`;
+        }
+
+        return '—';
+      }
+
+      function toRowFromException(exception = {}) {
+        const bucket = String(exception.bucket || '').toUpperCase();
+        const reason = exception.reason || '';
+        const invoiceNumber = exception.invoice_number || 'UNKNOWN';
+        const riskNote = exception.risk_note || reason || 'Financial review required';
+        const isUnresolved = bucket === 'UNRESOLVED';
+
+        return {
+          id: invoiceNumber,
+          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'UTC' }) + ' UTC',
+          margin: parseReasonToMargin(reason),
+          detail: reason || (isUnresolved ? 'No payout record found' : 'Reconciliation exception'),
+          risk: isUnresolved ? 'Critical' : 'High risk',
+          tone: 'red',
+          next: isUnresolved ? 'Request bank log' : 'Review settlement',
+          note: riskNote,
+          icon: isUnresolved ? 'warning' : 'arrow-down'
+        };
+      }
+
+      function updateDashboard(payload = {}) {
+        const total = Number(payload.total ?? 0);
+        const matchRate = Number(payload.match_rate ?? 0);
+        const ok = Number(payload.ok ?? 0);
+        const flagged = Number(payload.flagged ?? 0);
+        const unresolved = Number(payload.unresolved ?? 0);
+
+        const totalRecordsValue = document.getElementById('totalRecordsValue');
+        if (totalRecordsValue) totalRecordsValue.textContent = String(total);
+
+        const verificationRateValue = document.getElementById('verificationRateValue');
+        if (verificationRateValue) verificationRateValue.textContent = `${matchRate.toFixed(2)}%`;
+
+        const resolvedCountValue = document.getElementById('resolvedCountValue');
+        if (resolvedCountValue) resolvedCountValue.textContent = `${ok} / ${total}`;
+
+        const okCountValue = document.getElementById('okCountValue');
+        if (okCountValue) okCountValue.textContent = String(ok);
+
+        const flaggedCountValue = document.getElementById('flaggedCountValue');
+        if (flaggedCountValue) flaggedCountValue.textContent = String(flagged);
+
+        const unresolvedCountValue = document.getElementById('unresolvedCountValue');
+        if (unresolvedCountValue) unresolvedCountValue.textContent = String(unresolved);
+
+        const ring = document.querySelector('.ring');
+        if (ring) {
+          ring.style.background = `conic-gradient(var(--primary) ${Math.min(100, Math.max(0, matchRate))}%, var(--secondary) 0)`;
+        }
+      }
+
+      async function fetchAuditData() {
+        try {
+          const response = await fetch('/api/run-audit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+          });
+
+          if (!response.ok) {
+            throw new Error(`Audit request failed with status ${response.status}`);
+          }
+
+          const payload = await response.json();
+          const exceptions = Array.isArray(payload.exceptions) ? payload.exceptions : [];
+          rows = exceptions.map(toRowFromException);
+          updateDashboard(payload);
+        } catch (error) {
+          console.error('Failed to fetch audit exceptions:', error);
+          rows = [];
+          updateDashboard({ total: 0, match_rate: 0, ok: 0, flagged: 0, unresolved: 0 });
+        }
+
+        filterState.expandedRow = null;
+        renderRows();
+      }
+
+      function isVisible(row) {
+        if (filterState.value === 'All anomalies') return true;
+        return row.risk === 'High risk' || row.risk === 'Critical';
+      }
+
+      function renderRows() {
+        const visibleRows = rows.filter(isVisible);
+
+        filterLabel.textContent = filterState.value;
+        recordCount.textContent = `Showing ${visibleRows.length} of ${rows.length} records`;
+
+        tableBody.innerHTML = visibleRows.map((row) => {
+          const open = filterState.expandedRow === row.id;
+          const amountClass = row.margin.startsWith('-') ? 'negative' : row.margin === '—' ? 'neutral' : '';
+          const rowClass = open ? 'open' : '';
+          return `
+            <tr class="${rowClass}">
+              <td>
+                <button class="invoice-btn" type="button" data-id="${row.id}" aria-expanded="${open}">
+                  <div class="invoice-id">${row.id}</div>
+                  <div class="invoice-date">${row.date}</div>
+                </button>
+              </td>
+              <td>
+                <div class="amount ${amountClass}">${row.margin}</div>
+                <div class="detail-text">${row.detail}</div>
+              </td>
+              <td>
+                <span class="risk-badge ${getRiskClass(row.tone)}">
+                  <span class="risk-icon">${getIconMarkup(row.icon)}</span>
+                  ${row.risk}
+                </span>
+              </td>
+              <td>
+                <div class="step-cell">${row.next}</div>
+                ${open ? `<div class="note">AI risk note: ${row.note}</div>` : ''}
+              </td>
+              <td style="text-align:right;">
+                <button class="expand-btn ${open ? 'open' : ''}" type="button" data-id="${row.id}" aria-label="Expand ${row.id} details">
+                  <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m7 10 5 5 5-5"></path>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('filterBtn').addEventListener('click', () => {
+        filterState.value = filterState.value === 'All anomalies' ? 'High priority' : 'All anomalies';
+        filterState.expandedRow = null;
+        renderRows();
+      });
+
+      document.getElementById('tableBody').addEventListener('click', (event) => {
+        const target = event.target.closest('[data-id]');
+        if (!target) return;
+        const id = target.getAttribute('data-id');
+        filterState.expandedRow = filterState.expandedRow === id ? null : id;
+        renderRows();
+      });
+
+      document.getElementById('downloadBtn').addEventListener('click', () => {
+        const csv = '\uFEFFInvoice ID,Discrepancy Margin,Risk,Operational Next Step\n' + rows.map((row) => `${row.id},${row.margin},${row.risk},${row.next}`).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'audit_report.csv';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById('scanBtn').addEventListener('click', async () => {
+        const scanBtn = document.getElementById('scanBtn');
+        const scanText = document.getElementById('scanText');
+        const scanIcon = document.getElementById('scanIcon');
+
+        scanBtn.disabled = true;
+        scanText.textContent = 'Scanning ledger...';
+        scanIcon.classList.add('icon-spin');
+
+        try {
+          await fetchAuditData();
+        } finally {
+          scanBtn.disabled = false;
+          scanText.textContent = 'Trigger Live Ledger Scan';
+          scanIcon.classList.remove('icon-spin');
+        }
+      });
+
+      fetchAuditData();
+    </script>
+  </body>
+</html>
